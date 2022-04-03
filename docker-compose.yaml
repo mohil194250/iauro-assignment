@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  nodejs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodejs
+    depends_on:
+     - db
+     - mysqldb
+    container_name: nodejs
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_HOSTNAME=$MONGO_HOST
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB=$MONGO_DB
+      - MYSQL_HOST=mysqldb
+      - MYSQL_PORT=$MYSQL_PORT
+      - MYSQL_USER=$MYSQL_USER
+      - MYSQL_PASS=$MYSQL_ROOT_PASSWORD
+      - MYSQL_DB=$MYSQL_DB
+    ports:
+      - "8080:51005"
+    links:
+      - db
+      - mysqldb
+    volumes:
+      - .:/home/ubuntu/BackendDemoProject
+    command: sh -c './wait-for.sh -t 0 mysqldb:3306 -- node node_server.js'
+
+  db:
+    image: mongo:4.1.8-xenial
+    container_name: db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$MONGO_USERNAME
+      - MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD
+    volumes:     
+      - dbdata:/data/db
+    ports:
+      - '27018:27017'
+
+  mysqldb:
+    image: mysql:5.7
+    container_name: mysqldb
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE=$MYSQL_DB
+    healthcheck:
+      test: ["CMD-SHELL", 'mysqladmin ping']
+      interval: 10s
+      timeout: 2s
+      retries: 10
+    ports:
+      - '3306:3306'
+    volumes:
+      - db:/data/lib/mysql
+
+volumes:
+  dbdata:
+  node_modules:
+  db:
+
